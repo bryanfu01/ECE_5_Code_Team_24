@@ -8,8 +8,18 @@ int totalPhotoResistors = sizeof(LDR_Pin) / sizeof(LDR_Pin[0]);
 
 int LDR[99];
 
+int white_val = -1;
+int blakc_val = -1;
+
 void setup() {
   Serial.begin(9600); // For serial communication set up
+  Serial.print("Starting calibration for white surface in 2 seconds");
+  delay(2000);
+  white_val = analogRead(LDR_Pin[4]);
+  delay(3000);
+  Serial.print("Starting calibration for black surface in 2 seconds")
+  delay(2000);
+  black_val = analogRead(LDR_Pin[4])
 }
 
 void loop() {
@@ -22,7 +32,7 @@ void loop() {
 void ReadPhotoResistors() {
   // looping through analog pins 1-7 and storing their values into our LDR array
   for (int i = 0; i < totalPhotoResistors; i++) {
-    LDR[i] = map(analogRead(LDR_Pin[i]),0,4095,0,100);
+    LDR[i] = map(analogRead(LDR_Pin[i]), white_val, black_val, 0, 100);
     delay(2);
   }
 }

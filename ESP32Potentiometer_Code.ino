@@ -1,9 +1,9 @@
 /* Potentiometer Code UCSD ECE 5 Lab 4*/
 /* Declare Variables for Potentiometer */
-const int S_pin = 1; // proportional - analog pin 1
-const int P_pin = 2; // proportional - analog pin 2
-const int I_pin = 3; // integral - analog pin 3
-const int D_pin = 4; // derivative - analog pin 4
+const int S_pin = 10; // proportional - analog pin 1
+const int P_pin = 11; // proportional - analog pin 2
+const int I_pin = 12; // integral - analog pin 3
+const int D_pin = 13; // derivative - analog pin 4
 int Sp = 0;           // speed gain coeficient
 int kP = 0;           // proportional gain coeficient
 int kI = 0;           // integral gain coeficient
