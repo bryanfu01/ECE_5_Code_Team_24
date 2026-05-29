@@ -37,9 +37,9 @@
 // ************************************************************************************************* //
 // Change Robot Settings here
 
-#define PRINTALLDATA        1  // Turn to 1  to prints ALL the data when changed to 1, Could be useful for debugging =)
+#define PRINTALLDATA        0  // Turn to 1  to prints ALL the data when changed to 1, Could be useful for debugging =)
                                 // !! Turn to 0 when running robot untethered
-#define NOMINALSPEED        30 // This is the base speed for both motors, can also be increased by using potentiometers
+#define NOMINALSPEED        50 // This is the base speed for both motors, can also be increased by using potentiometers
 
 // ************************************************************************************************* //
 
@@ -58,9 +58,9 @@ int LDR_Pin[] = {1,2,3,4,5,6,7}; // SET PINS CONNECTED TO PHOTORESISTORS // FROM
 const int S_pin = 13; // Pin connected to Speed potentiometer
 const int P_pin = 12; // Pin connected to P term potentiometer
 const int I_pin = 11; // Pin connected to I term potentiometer
-const int D_pin = 10; // Pin connected to D term potentiometer
+const int D_pin = 9; // Pin connected to D term potentiometer
                                                                  
-int led_Pins[] = {46};  // LEDs to indicate what part of calibration you're on and to illuminate the photoresistors
+int led_Pins[] = {46, 17};  // LEDs to indicate what part of calibration you're on and to illuminate the photoresistors
 
 // ****** DECLARE Variables HERE  ****** 
 
@@ -80,13 +80,16 @@ int totalPhotoResistors = sizeof(LDR_Pin) / sizeof(LDR_Pin[0]);
 int numLEDs = sizeof(led_Pins) / sizeof(led_Pins[0]); 
 int MxRead, MxIndex, CriteriaForMax;
 int leftHighestPR, highestPResistor, rightHighestPR;
-float AveRead, WeightedAve;   
+float AveRead, WeightedAve;
+// All global values initialized to 0
 
 // For Motor Control
 int M1SpeedtoMotor, M2SpeedtoMotor;
 int Turn, M1P = 0, M2P = 0;
 float error, lasterror = 0, sumerror = 0;
 float kP, kI, kD;
+int speed_reduction = 1;
+int direction = 1;
 
 
 
@@ -100,7 +103,8 @@ void setup() {
   
   Calibrate();                                   // Calibrate black and white sensing
 
-  ReadPotentiometers();                          // Read potentiometer values (Sp, P, I, & D)
+  ReadPotentiometers();  
+                    // Read potentiometer values (Sp, P, I, & D)
 
 } // end setup()
 
@@ -114,9 +118,14 @@ void loop() {
 
   CalcError();          // Calculates error
 
-  PID_Turn();           // PID Control and Output to motors to turn
-
-  RunMotors();          // Runs motors
+  if (direction == 1){
+    PID_Turn();           // PID Control and Output to motors to turn
+  }
+  else{
+    M1P = 0;
+    M2P = 0;
+  }
+  RunMotors(direction, speed_reduction);          // Runs motors
   
   if (PRINTALLDATA)     // If PRINTALLDATA Enabled, Print all the data
     Print();         
@@ -138,7 +147,7 @@ void Calibrate() {
   CalibrateHelper(numberOfMeasurements, false); // White Calibration
 
   setLeds(0);                                   // Turn off LEDs to indicate user to calibrate other color
-  delay(2000);
+  delay(4000);
   
   CalibrateHelper(numberOfMeasurements, true);  // Black Calibration
 
@@ -235,29 +244,49 @@ void ReadPhotoResistors() {
 
 // **********Recall your Challenge #3 Code********************************************************************** //
 // function to start motors using nominal speed + speed addition from potentiometer
-void RunMotors() {
-  M1SpeedtoMotor = min(NOMINALSPEED + SpRead + M1P, 255); // limits speed to 255
-  M2SpeedtoMotor = min(NOMINALSPEED + SpRead + M2P, 255); // remember M1Sp & M2Sp is defined at beginning of code (default 60)
+void RunMotors(int direction, int speed_reduction) {
+  // Direction = 1 indicates forward, Direction = -1 indicates backward
+  M1SpeedtoMotor = min((NOMINALSPEED + SpRead)/speed_reduction + M1P, 255); // limits speed to 255
+  M2SpeedtoMotor = min((NOMINALSPEED + SpRead)/speed_reduction + M2P, 255); // remember M1Sp & M2Sp is defined at beginning of code (default 60)
   
-  runMotorAtSpeed(LEFT, M2SpeedtoMotor); // run right motor 
-  runMotorAtSpeed(RIGHT, M1SpeedtoMotor); // run left motor
+  runMotorAtSpeed(LEFT, M2SpeedtoMotor, direction); // run right motor 
+  runMotorAtSpeed(RIGHT, M1SpeedtoMotor, direction); // run left motor
 } // end RunMotors()
 
 // A function that commands a specified motor to move towards a given direction at a given speed
-void runMotorAtSpeed(side _side, int speed) {
-  if (_side == LEFT) {
+void runMotorAtSpeed(side _side, int speed, int direction) {
+  // Direction = 1 indicates forward, Direction = -1 indicates backward
+  if (direction == 1) {
+    if (_side == LEFT) {
+      DriveMotors.setSpeedA(abs(speed));
+      if (speed > 0)                // swap direction if speed is negative
+        DriveMotors.forwardA();           // sets the direction of the motor from arguments
+      else
+        DriveMotors.backwardA();          // sets the direction of the motor from arguments
+    }
+    if (_side == RIGHT) {
+      DriveMotors.setSpeedB(abs(speed));
+      if (speed > 0)                // swap direction if speed is negative
+        DriveMotors.backwardB();           // sets the direction of the motor from arguments
+      else
+        DriveMotors.forwardB();          // sets the direction of the motor from arguments
+    }
+  }
+  else {
+    if (_side == LEFT) {
     DriveMotors.setSpeedA(abs(speed));
     if (speed > 0)                // swap direction if speed is negative
-      DriveMotors.forwardA();           // sets the direction of the motor from arguments
+      DriveMotors.backwardA();           // sets the direction of the motor from arguments
     else
-      DriveMotors.backwardA();          // sets the direction of the motor from arguments
+      DriveMotors.forwardA();          // sets the direction of the motor from arguments
   }
   if (_side == RIGHT) {
     DriveMotors.setSpeedB(abs(speed));
     if (speed > 0)                // swap direction if speed is negative
-      DriveMotors.backwardB();           // sets the direction of the motor from arguments
+      DriveMotors.forwardB();           // sets the direction of the motor from arguments
     else
-      DriveMotors.forwardB();          // sets the direction of the motor from arguments
+      DriveMotors.backwardB();          // sets the direction of the motor from arguments
+  }
   }
 }
 
@@ -276,7 +305,7 @@ void CalcError() {
     }
     AveRead = AveRead + (float)LDR[i] / (float)totalPhotoResistors;
   }
-  
+
   CriteriaForMax = 1.5; 
   if (MxRead > CriteriaForMax * AveRead) { // Make sure that the highestPResistor is actually "seeing" a line. What happens if there is no line and we take the photoresistor that happens to have the highest value?
 
@@ -299,9 +328,19 @@ void CalcError() {
     WeightedAve = ((float)numerator) / denominator;
 
     error = (WeightedAve - totalPhotoResistors/2);
+
+    direction = 1;
   }
-  
+  else{
+    direction = -1;
+    speed_reduction *= 2;
+  }
+    
 } // end CalcError()
+
+void Backtrack() {
+
+}
 
 // ************************************************************************************************* //
 // PID Function
@@ -311,6 +350,9 @@ void PID_Turn() {
   kD = (float)kDRead * 0.01;
 
   Turn = error * kP + sumerror * kI + (error - lasterror) * kD; // PID!!!!!!!!!!!!!
+
+  if (abs(error - lasterror) < 0.5) // Better tune these values
+    speed_reduction = 1; 
 
   if (sumerror > 5)   // prevents integrator wind-up
     sumerror = 5;
