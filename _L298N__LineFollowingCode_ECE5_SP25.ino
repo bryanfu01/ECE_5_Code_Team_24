@@ -39,7 +39,7 @@
 
 #define PRINTALLDATA        0  // Turn to 1  to prints ALL the data when changed to 1, Could be useful for debugging =)
                                 // !! Turn to 0 when running robot untethered
-#define NOMINALSPEED        50 // This is the base speed for both motors, can also be increased by using potentiometers
+#define NOMINALSPEED        100 // This is the base speed for both motors, can also be increased by using potentiometers
 
 // ************************************************************************************************* //
 
@@ -55,10 +55,10 @@ enum side {LEFT, RIGHT};
 int LDR_Pin[] = {1,2,3,4,5,6,7}; // SET PINS CONNECTED TO PHOTORESISTORS // FROM LEFT TO RIGHT OF THE ROBOT, ROBOT IS ORIENTED WHERE PHOTORESISOTRS FARTHEST FROM YOU AND WHEELS ARE CLOSEST TO YOU      
 
 // Potentiometer Pins
-const int S_pin = 13; // Pin connected to Speed potentiometer
-const int P_pin = 12; // Pin connected to P term potentiometer
-const int I_pin = 11; // Pin connected to I term potentiometer
-const int D_pin = 9; // Pin connected to D term potentiometer
+const int S_pin = 14; // Pin connected to Speed potentiometer
+const int P_pin = 13; // Pin connected to P term potentiometer
+const int I_pin = 12; // Pin connected to I term potentiometer
+const int D_pin = 11; // Pin connected to D term potentiometer
                                                                  
 int led_Pins[] = {46, 17};  // LEDs to indicate what part of calibration you're on and to illuminate the photoresistors
 
@@ -104,6 +104,9 @@ void setup() {
   Calibrate();                                   // Calibrate black and white sensing
 
   ReadPotentiometers();  
+
+  Serial.print(" Sp: " + String(SpRead) + " P: " + String(kPRead) + " I: " + String(kIRead) + " D: " + String(kDRead)); // Prints PID settings
+
                     // Read potentiometer values (Sp, P, I, & D)
 
 } // end setup()
@@ -117,7 +120,7 @@ void loop() {
   ReadPhotoResistors(); // Read photoresistors 
 
   CalcError();          // Calculates error
-
+  
   if (direction == 1){
     PID_Turn();           // PID Control and Output to motors to turn
   }
@@ -128,7 +131,8 @@ void loop() {
   RunMotors(direction, speed_reduction);          // Runs motors
   
   if (PRINTALLDATA)     // If PRINTALLDATA Enabled, Print all the data
-    Print();         
+    Print();    
+     
   
 } // end loop()
 
@@ -246,8 +250,8 @@ void ReadPhotoResistors() {
 // function to start motors using nominal speed + speed addition from potentiometer
 void RunMotors(int direction, int speed_reduction) {
   // Direction = 1 indicates forward, Direction = -1 indicates backward
-  M1SpeedtoMotor = min((NOMINALSPEED + SpRead)/speed_reduction + M1P, 255); // limits speed to 255
-  M2SpeedtoMotor = min((NOMINALSPEED + SpRead)/speed_reduction + M2P, 255); // remember M1Sp & M2Sp is defined at beginning of code (default 60)
+  M1SpeedtoMotor = min((NOMINALSPEED + SpRead)*speed_reduction + M1P, 255); // limits speed to 255
+  M2SpeedtoMotor = min((NOMINALSPEED + SpRead)*speed_reduction + M2P, 255); // remember M1Sp & M2Sp is defined at beginning of code (default 60)
   
   runMotorAtSpeed(LEFT, M2SpeedtoMotor, direction); // run right motor 
   runMotorAtSpeed(RIGHT, M1SpeedtoMotor, direction); // run left motor
@@ -305,8 +309,10 @@ void CalcError() {
     }
     AveRead = AveRead + (float)LDR[i] / (float)totalPhotoResistors;
   }
-
-  CriteriaForMax = 1.5; 
+  if (AveRead > 0)
+    CriteriaForMax = 2; 
+  else
+    CriteriaForMax = 0.5;
   if (MxRead > CriteriaForMax * AveRead) { // Make sure that the highestPResistor is actually "seeing" a line. What happens if there is no line and we take the photoresistor that happens to have the highest value?
 
     // Next we assign variables to hold the index of the left and right Photoresistor that has the highest value, though we have to make sure that we aren't checking a Photoresistor that doesn't exist.
@@ -332,15 +338,12 @@ void CalcError() {
     direction = 1;
   }
   else{
+    speed_reduction *= 0.66;
     direction = -1;
-    speed_reduction *= 2;
   }
     
 } // end CalcError()
 
-void Backtrack() {
-
-}
 
 // ************************************************************************************************* //
 // PID Function
@@ -383,14 +386,19 @@ void PID_Turn() {
 // ************************************************************************************************* //
 // function to print values of interest
 void Print() {
-  Serial.print(" Sp: " + String(SpRead) + " P: " + String(kP) + " I: " + String(kI) + " D: " + String(kD) + "  PResistor Val : "); // Prints PID settings
-
+  Serial.println(" Sp: " + String(SpRead) + " P: " + String(kPRead) + " I: " + String(kIRead) + " D: " + String(kDRead)); // Prints PID settings
+  Serial.println(" Direction: " + String(direction));
+  Serial.println("  PResistor Val : ");
   for (int i = 0; i < totalPhotoResistors; i++) { // Printing the photo resistor reading values one by one
     Serial.print(LDR[i]);
     //Serial.print(rawPResistorData[i]); //Uncomment this if you would prefer to see raw photoresistor readings
     Serial.print(" ");
   }
 
+  Serial.println("Criteria for max:" + String(CriteriaForMax * AveRead) + " Maximum read: " +  String(MxRead));
+
+  delay(500);
+  /*
   Serial.print(" Error: " + String(error));      // this will show the calculated error (-3 through 3)
 
   Serial.println("  LMotor:  " + String(M1SpeedtoMotor) + "  RMotor:  " + String(M2SpeedtoMotor));    // This prints the arduino output to each motor so you can see what the values are (0-255)
@@ -398,5 +406,5 @@ void Print() {
   delay(100);                                    // just here to slow down the output for easier reading. Don't comment out or else it'll slow down the processor on the arduino
   setLeds(1); 
   delay(100); 
-
+  */
 } // end Print()
