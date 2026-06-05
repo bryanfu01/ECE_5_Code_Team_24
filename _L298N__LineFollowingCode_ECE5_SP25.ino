@@ -284,14 +284,22 @@ void runMotorAtSpeed(side _side, int speed, int direction) {
     else
       DriveMotors.forwardA();          // sets the direction of the motor from arguments
   }
-  if (_side == RIGHT) {
-    DriveMotors.setSpeedB(abs(speed));
-    if (speed > 0)                // swap direction if speed is negative
-      DriveMotors.forwardB();           // sets the direction of the motor from arguments
-    else
-      DriveMotors.backwardB();          // sets the direction of the motor from arguments
+    if (_side == RIGHT) {
+      DriveMotors.setSpeedB(abs(speed));
+      if (speed > 0)                // swap direction if speed is negative
+        DriveMotors.forwardB();           // sets the direction of the motor from arguments
+      else
+        DriveMotors.backwardB();          // sets the direction of the motor from arguments
+    }
   }
+  /*
+  else {
+    DriverMotors.setSpeedA(abs(speed));
+    DriveMotors.backwardA();
+    DriverMotors.setSpeedB(abs(speed));
+    DriveMotors.backwardB();
   }
+  */
 }
 
 
